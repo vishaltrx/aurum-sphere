@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURUM SPHERE — Autonomous Mine Countermeasure Platform</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.hero{padding:5rem 3rem 4rem;max-width:1080px;margin:0 auto;border-bottom:1px solid var(--border);}
+.hero-eyebrow{font-family:var(--mono);font-size:0.72rem;color:var(--gold);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:1.2rem;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow::before{content:'';display:block;width:28px;height:1px;background:var(--gold);}
+.hero h1{font-size:clamp(2.4rem,5vw,4.2rem);font-weight:600;line-height:1.08;letter-spacing:-0.03em;margin-bottom:1.5rem;}
+.hero h1 span{color:var(--gold);}
+.hero-statement{font-size:1.05rem;color:var(--mid);max-width:620px;line-height:1.7;margin-bottom:2rem;}
+.hero-quote{font-size:0.9rem;color:var(--mid);max-width:600px;margin-bottom:2.5rem;padding:1rem 1.2rem;border-left:2px solid var(--gold);font-style:italic;line-height:1.65;}
+.hero-actions{display:flex;gap:0.8rem;flex-wrap:wrap;}
+.btn{font-size:0.82rem;font-weight:500;letter-spacing:0.04em;text-decoration:none;padding:0.6rem 1.5rem;display:inline-block;transition:all 0.15s;}
+.btn-solid{background:var(--text);color:#fff;}
+.btn-solid:hover{background:var(--gold);}
+.btn-ghost{border:1px solid var(--border2);color:var(--mid);}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--border);}
+.kpi-strip-cell{padding:1.5rem 1.2rem;text-align:center;border-right:1px solid var(--border);}
+.kpi-strip-cell:last-child{border-right:none;}
+.kpi-strip-num{font-family:var(--mono);font-size:1.3rem;font-weight:500;color:var(--text);display:block;margin-bottom:0.25rem;}
+.kpi-strip-lbl{font-size:0.68rem;color:var(--dim);letter-spacing:0.06em;text-transform:uppercase;}
+.section{padding:4rem 3rem;max-width:1080px;margin:0 auto;}
+.section-hdr{margin-bottom:2rem;padding-bottom:1.2rem;border-bottom:1px solid var(--border);}
+.section-hdr .eyebrow{font-family:var(--mono);font-size:0.65rem;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem;display:block;}
+.section-hdr h2{font-size:1.5rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:0.4rem;}
+.section-hdr p{color:var(--mid);font-size:0.88rem;max-width:600px;}
+.comp-table{width:100%;border-collapse:collapse;margin-top:1.5rem;font-size:0.84rem;}
+.comp-table th{font-family:var(--mono);font-size:0.63rem;color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;text-align:left;padding:0.65rem 1rem;font-weight:400;border-top:2px solid var(--text);border-bottom:1px solid var(--border2);}
+.comp-table td{padding:0.65rem 1rem;border-bottom:1px solid var(--border);color:var(--mid);}
+.comp-table tr:hover td{background:var(--surface);}
+.comp-table .us td{color:var(--text);font-weight:500;border-bottom:2px solid var(--text);}
+.comp-table .us td:first-child{border-left:2px solid var(--gold);padding-left:calc(1rem - 2px);}
+.tick{color:var(--green);font-family:var(--mono);font-size:0.8rem;}
+.cross{color:var(--red);font-family:var(--mono);font-size:0.8rem;}
+.domain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);margin-top:1.5rem;}
+.domain-card{padding:1.8rem 1.5rem;border-right:1px solid var(--border);}
+.domain-card:last-child{border-right:none;}
+.domain-num{font-family:var(--mono);font-size:0.65rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:0.8rem;display:block;}
+.domain-title{font-size:0.95rem;font-weight:600;margin-bottom:0.8rem;}
+.domain-spec{font-family:var(--mono);font-size:0.7rem;color:var(--dim);line-height:1.9;}
+.hull-layers{margin-top:1.5rem;border:1px solid var(--border);}
+.layer-row{display:grid;grid-template-columns:2rem 200px 1fr 140px;align-items:center;gap:1.5rem;padding:0.9rem 1.2rem;border-bottom:1px solid var(--border);font-size:0.84rem;}
+.layer-row:last-child{border-bottom:none;}
+.layer-row:hover{background:var(--surface);}
+.layer-n{font-family:var(--mono);font-size:0.7rem;color:var(--dim);}
+.layer-name{font-weight:500;}
+.layer-spec{font-family:var(--mono);font-size:0.72rem;color:var(--dim);line-height:1.7;}
+.layer-std{font-family:var(--mono);font-size:0.68rem;color:var(--dim);text-align:right;}
+.sim-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:1.5rem;}
+.sim-card{background:#fff;padding:2rem 1.8rem;text-decoration:none;color:var(--text);transition:background 0.15s;display:block;}
+.sim-card:hover{background:var(--surface);}
+.sim-card .num{font-family:var(--mono);font-size:0.65rem;color:var(--dim);letter-spacing:0.1em;margin-bottom:0.8rem;display:block;}
+.sim-card h3{font-size:1rem;font-weight:600;margin-bottom:0.5rem;}
+.sim-card p{font-size:0.82rem;color:var(--mid);line-height:1.6;margin-bottom:1.2rem;}
+.sim-card .arrow{font-family:var(--mono);font-size:0.72rem;color:var(--gold);}
+.sim-card.inactive{opacity:0.45;cursor:default;pointer-events:none;}
+.evidence-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:1.5rem;}
+.ev-card{border:1px solid var(--border);padding:1.5rem;}
+.ev-src{font-family:var(--mono);font-size:0.63rem;color:var(--gold);letter-spacing:0.08em;margin-bottom:0.5rem;display:block;}
+.ev-title{font-size:0.9rem;font-weight:600;margin-bottom:0.4rem;}
+.ev-body{font-size:0.82rem;color:var(--mid);line-height:1.6;}
+.ev-stat{font-family:var(--mono);font-size:0.78rem;color:var(--text);margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border);display:block;}
+.cred-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:1.5rem;}
+.cred-card{border-top:2px solid var(--text);padding-top:1rem;}
+.cred-title{font-size:0.88rem;font-weight:600;margin-bottom:0.4rem;}
+.cred-body{font-size:0.82rem;color:var(--mid);line-height:1.6;}
+.contact-block{max-width:560px;margin-top:1.5rem;border:1px solid var(--border);padding:2rem;}
+.contact-row{display:grid;grid-template-columns:120px 1fr;gap:1rem;margin-bottom:0.8rem;font-size:0.84rem;align-items:baseline;}
+.contact-key{font-family:var(--mono);font-size:0.65rem;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;padding-top:0.15rem;}
+.contact-val{color:var(--text);}
+.contact-val a{color:var(--gold);text-decoration:none;}
+.alt-bg{background:var(--surface);}
+@media(max-width:900px){.kpi-strip{grid-template-columns:repeat(3,1fr)}.domain-grid{grid-template-columns:repeat(2,1fr)}.domain-card:nth-child(2){border-right:none}.layer-row{grid-template-columns:2rem 1fr}.layer-std{display:none}}
+@media(max-width:640px){.sim-grid{grid-template-columns:1fr}.evidence-grid{grid-template-columns:1fr}.cred-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="#" class="topbar-logo">AURUM <span>SPHERE</span></a>
+  <ul class="topbar-nav">
+    <li><a href="#gap">Capability Gap</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#simulations">Simulations</a></li>
+    <li><a href="#evidence">Evidence</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="sims/sim01-energy.html" class="topbar-cta">Run Simulations &rarr;</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">DASA Open Competition &mdash; Phase 1 Technical Proposal</div>
+  <h1>AURUM<br><span>SPHERE</span></h1>
+  <p class="hero-statement">A 1.15 kg autonomous platform that transitions from aerial delivery to beach traverse to sea-surface survey to seabed mine attachment &mdash; in a single expendable unit. The only system designed specifically for the 0&ndash;5 m surf-zone environment.</p>
+  <blockquote class="hero-quote">No fielded NATO autonomous MCM system can operate in the surf zone as of 2026. Every existing platform &mdash; REMUS 100, Knifefish, K-Ster C, SWEEP &mdash; fails in water shallower than 5 metres. AURUM SPHERE is designed specifically for that gap.</blockquote>
+  <div class="hero-actions">
+    <a href="#simulations" class="btn btn-solid">View Live Physics Simulations</a>
+    <a href="#gap" class="btn btn-ghost">See the Competitive Gap</a>
+  </div>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">&gt;95%</span><span class="kpi-strip-lbl">Mine detect Pd</span></div>
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">&lt;1%</span><span class="kpi-strip-lbl">False alarm Pfa</span></div>
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">85 dB</span><span class="kpi-strip-lbl">MHD acoustic sig.</span></div>
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">&pound;900</span><span class="kpi-strip-lbl">Unit cost</span></div>
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">4</span><span class="kpi-strip-lbl">Operational domains</span></div>
+  <div class="kpi-strip-cell"><span class="kpi-strip-num">1.15 kg</span><span class="kpi-strip-lbl">Total mass</span></div>
+</div>
+
+<div id="gap" class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">01 &mdash; Capability Gap</span>
+    <h2>The Gap Every Existing System Leaves</h2>
+    <p>The surf zone (0&ndash;5 m depth) is the highest-value mine placement zone for any adversary opposing an amphibious landing. Every funded autonomous MCM system in service today cannot access it.</p>
+  </div>
+  <table class="comp-table">
+    <thead><tr><th>Platform</th><th>Mass</th><th>Surf zone (0&ndash;5 m)</th><th>Beach traverse</th><th>Plastic mine Pd</th><th>Operating cost</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>REMUS 100 (HII)</td><td class="mono">37 kg</td><td class="cross">&#x2717; &gt;5 m min.</td><td class="cross">&#x2717;</td><td class="mono">~5%</td><td class="mono">&pound;8,000/day</td><td>In service</td></tr>
+      <tr><td>Knifefish (US Navy)</td><td class="mono">~45 kg</td><td class="cross">&#x2717; &gt;5 m min.</td><td class="cross">&#x2717;</td><td class="mono">~10%</td><td class="mono">&pound;12,000/day</td><td>In service</td></tr>
+      <tr><td>K-Ster C (Exail / NATO)</td><td class="mono">~3 kg</td><td class="cross">&#x2717; water-launch only</td><td class="cross">&#x2717;</td><td class="mono">&lt;5%</td><td class="mono">&euro;15,000/day</td><td>2025 contract</td></tr>
+      <tr><td>SWEEP USV (Royal Navy)</td><td class="mono">~300 kg</td><td class="cross">&#x2717; open water only</td><td class="cross">&#x2717;</td><td class="mono">~20%</td><td class="mono">&pound;25,000/day</td><td>In service Jul 2025</td></tr>
+      <tr><td>Ghost Shark XL (Anduril)</td><td class="mono">2,720 kg</td><td class="cross">&#x2717; deep-water UUV</td><td class="cross">&#x2717;</td><td class="mono">N/A</td><td class="mono">Classified</td><td>Production 2026</td></tr>
+      <tr><td>Hunt-class MCMV (RN)</td><td class="mono">700 t</td><td class="cross">&#x2717; vessel platform</td><td class="cross">&#x2717;</td><td class="mono">~15%</td><td class="mono">&pound;3,000,000/day</td><td>Retiring 2025&ndash;31</td></tr>
+      <tr class="us"><td>SPHERE-X v7.0 (proposed)</td><td class="mono">1.15 kg</td><td class="tick">&#x2714; 0&ndash;5 m</td><td class="tick">&#x2714;</td><td class="mono">&gt;95% target</td><td class="mono">&pound;900 / unit</td><td>Phase 1 research</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:0.8rem;font-size:0.75rem;color:var(--dim);font-family:var(--mono);">Sources: Defence Advancement (2025); Army Recognition (2025); Jane&apos;s Defence (2023); IISS (2023).</p>
+</div>
+
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+<div id="solution" class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">02 &mdash; Proposed Solution</span>
+    <h2>Four Domains. One Platform.</h2>
+    <p>A single air-delivered unit executes the complete MCM mission. No redeployment. No crew in the minefield. Human authorisation required before any detonation event.</p>
+  </div>
+  <div class="domain-grid">
+    <div class="domain-card"><span class="domain-num">DOMAIN 01 &mdash; AIR</span><div class="domain-title">Aerial Delivery</div><div class="domain-spec">UAV drop &middot; &gt;1,000 m standoff<br>Release altitude 2&ndash;4 m AGL<br>50 g impact rated (TPU-95A liner)<br>No parachute required</div></div>
+    <div class="domain-card"><span class="domain-num">DOMAIN 02 &mdash; LAND</span><div class="domain-title">Beach Traverse</div><div class="domain-spec">Momentum-wheel + pendulum drive<br>0.4&ndash;1.65 m/s &middot; gradient 1:15<br>RotunBot RT-G analogue (TRL 6&ndash;7)<br>Sand &middot; gravel &middot; wet surf terrain</div></div>
+    <div class="domain-card"><span class="domain-num">DOMAIN 03 &mdash; SEA SURFACE</span><div class="domain-title">Sea-Surface Survey</div><div class="domain-spec">Dual waterjet tunnels &middot; 1.6 N thrust<br>0.8&ndash;1.2 m/s transit speed<br>Blue Robotics T100 pumps<br>Sea state 0&ndash;2 operational</div></div>
+    <div class="domain-card"><span class="domain-num">DOMAIN 04 &mdash; SEABED</span><div class="domain-title">Seabed Approach</div><div class="domain-spec">Oscillating fin transit &middot; 88&ndash;92 dB<br>MHD final 20 m &middot; ~85 dB<br>Triple attachment &middot; 1,060 N total<br>Human authorisation required</div></div>
+  </div>
+  <h3 style="font-size:1rem;font-weight:600;margin-top:2.5rem;margin-bottom:0.8rem;">Five-Layer Stealth Hull &mdash; 26.5 mm Total Wall Thickness</h3>
+  <div class="hull-layers">
+    <div class="layer-row"><span class="layer-n">L1</span><span class="layer-name">RAMA radar-absorbing paint</span><span class="layer-spec">0.5 mm &middot; &minus;20 dB RCS at 8&ndash;18 GHz</span><span class="layer-std">ASTM D3359</span></div>
+    <div class="layer-row"><span class="layer-n">L2</span><span class="layer-name">Alberich anechoic rubber</span><span class="layer-spec">12 mm &middot; &minus;15 dB acoustic insertion loss at 5&ndash;50 kHz</span><span class="layer-std">NATO STANAG 4589</span></div>
+    <div class="layer-row"><span class="layer-n">L3</span><span class="layer-name">CFRP T700/epoxy structural shell</span><span class="layer-spec">5 mm &middot; wall &plusmn;0.25 mm &middot; M4 equatorial split flange</span><span class="layer-std">ASTM D3039</span></div>
+    <div class="layer-row"><span class="layer-n">L4</span><span class="layer-name">TPU-95A impact liner</span><span class="layer-spec">8 mm &middot; 40% KE absorption at 50 g shock loading</span><span class="layer-std">MIL-STD-810H</span></div>
+    <div class="layer-row" style="border-bottom:none;"><span class="layer-n">L5</span><span class="layer-name">Silica aerogel thermal insulation</span><span class="layer-spec">1 mm &middot; k &le; 0.015 W/m&middot;K &middot; &Delta;T &lt; 0.1&deg;C external signature</span><span class="layer-std">ASTM C518</span></div>
+  </div>
+</div>
+</div>
+
+<div id="simulations" class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">03 &mdash; Live Physics Simulations</span>
+    <h2>Run the Physics</h2>
+    <p>Every performance claim is backed by a working simulation. Adjust parameters and see the numbers change in real time. Real equations &mdash; not diagrams.</p>
+  </div>
+  <div class="sim-grid">
+    <a href="sims/sim01-energy.html" class="sim-card"><span class="num">SIM-01 &middot; ENERGY &amp; ENDURANCE</span><h3>Battery Depletion Model</h3><p>Physics-based endurance across six mission modes. Adjust capacity, DoD limit, and mode. Values from component datasheets.</p><span class="arrow">Run simulation &rarr;</span></a>
+    <a href="sims/sim02-mad.html" class="sim-card"><span class="num">SIM-02 &middot; MAD DETECTION FIELD</span><h3>Magnetic Anomaly Model</h3><p>Dipole field equations. Detection range vs mine magnetic moment and sensor altitude. Validated against ONR field trial data.</p><span class="arrow">Run simulation &rarr;</span></a>
+    <a href="sims/sim03-fusion.html" class="sim-card"><span class="num">SIM-03 &middot; BAYESIAN SENSOR FUSION</span><h3>Three-Channel Fusion Pipeline</h3><p>MAD + GPR + LWIR Bayesian fusion. Toggle sensors, set priors and node count. Shows Pd rising from single sensors to &gt;95% fused.</p><span class="arrow">Run simulation &rarr;</span></a>
+    <a href="sims/sim04-hydro.html" class="sim-card"><span class="num">SIM-04 &middot; HYDRODYNAMICS</span><h3>Drag &amp; Endurance Tradeoff</h3><p>Oblate spheroid drag model. Thrust, power, and endurance curves. Why 0.3 m/s is the optimal seabed search speed.</p><span class="arrow">Run simulation &rarr;</span></a>
+    <a href="sims/sim05-swarm.html" class="sim-card"><span class="num">SIM-05 &middot; SWARM COVERAGE</span><h3>Swarm Coverage &amp; Comms</h3><p>Animated lawnmower survey with acoustic mesh network. Real acoustic propagation physics. Coverage rate vs node count.</p><span class="arrow">Run simulation &rarr;</span></a>
+    <div class="sim-card inactive"><span class="num">SIM-06 &middot; IN DEVELOPMENT</span><h3>MHD Lorentz Thrust Model</h3><p>Lorentz force vs salinity, electrode current, and magnet field. NdFeB ring magnet simulation.</p><span class="arrow" style="color:var(--dim);">Coming Phase 2</span></div>
+  </div>
+</div>
+
+<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+<div id="evidence" class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">04 &mdash; Peer-Reviewed Evidence Base</span>
+    <h2>Every Claim is Referenced</h2>
+    <p>Fifteen citations across four technical pillars. All performance claims conditioned and anchored to published sources or funded programme analogues.</p>
+  </div>
+  <div class="evidence-grid">
+    <div class="ev-card"><span class="ev-src">Griffiths, Webb &amp; Trembanis &mdash; J. Field Robotics (2019)</span><div class="ev-title">Multi-sensor fusion reduces false alarms 6&ndash;12&times;</div><p class="ev-body">Fusion of two or more complementary modalities reduces false alarm rate by a factor of 6&ndash;12 vs any single sensor. Benchmark: 91.4% Pd on metallic mines at &gt;5 m depth.</p><span class="ev-stat">SPHERE-X target: Pd &gt;0.95 on plastic mines in surf zone</span></div>
+    <div class="ev-card"><span class="ev-src">Zhang et al. &mdash; arXiv:2511.01288 (2024)</span><div class="ev-title">RotunBot RT-G: momentum-wheel drive at TRL 6&ndash;7</div><p class="ev-body">Zhejiang University / Logon Technology. Momentum-wheel augmented pendulum locomotion demonstrated at up to 10 m/s across mud, gravel, and river crossings. Sealed for water immersion.</p><span class="ev-stat">Direct field-scale analogue for SPHERE-X beach traverse drive</span></div>
+    <div class="ev-card"><span class="ev-src">Szymak et al. &mdash; Nature Sci. Reports (2025)</span><div class="ev-title">Oscillating fin drive: &lt;90 dB re 1 &micro;Pa, &eta; = 80&ndash;87%</div><p class="ev-body">SABUVIS / European Defence Agency programme. Biomimetic UUV achieves sub-90 dB hydroacoustic signature. NATO/EDA peer-reviewed validation in a defence context.</p><span class="ev-stat">Fin transit 88&ndash;92 dB &rarr; MHD final approach ~85 dB</span></div>
+    <div class="ev-card"><span class="ev-src">Yan, Liang &amp; Xu &mdash; Ocean Engineering (2012)</span><div class="ev-title">Permanent NdFeB MHD: thrust coefficient C&sub;T; = 0.94</div><p class="ev-body">N52 NdFeB ring magnets at 0.38 T produce 0.028 N at 4 A in 3.5% salinity seawater. Validates SPHERE-X MHD duct design point.</p><span class="ev-stat">F = 0.94 &times; 0.4 T &times; 3 A &times; 0.018 m = 0.020 N</span></div>
+    <div class="ev-card"><span class="ev-src">Pebody &mdash; IEEE OCEANS (2008)</span><div class="ev-title">Oblate spheroids: 22&ndash;31% drag reduction</div><p class="ev-body">Oblate body at aspect ratio a/c &asymp; 1.1 provides 22&ndash;31% drag reduction versus cylindrical vehicles of equivalent volume, extending endurance at equal battery capacity.</p><span class="ev-stat">SPHERE-X: Cd = 0.38 oblate vs Cd = 0.47 equivalent sphere</span></div>
+    <div class="ev-card"><span class="ev-src">IISS &mdash; Maritime Mine Warfare Assessment (2023)</span><div class="ev-title">Mine cost-to-denial ratio: 6,000:1</div><p class="ev-body">400 mine incidents since 2000: USD 340B total economic impact against under USD 50M adversary procurement cost. Mine inventories projected to double by 2030.</p><span class="ev-stat">&pound;500 mine : &pound;4.7B/week port denial. SPHERE-X: &pound;900 / unit.</span></div>
+  </div>
+</div>
+</div>
+
+<div class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">05 &mdash; Principal Investigator</span>
+    <h2>Engineering Background</h2>
+    <p>A working marine electronics engineer with directly relevant defence-adjacent experience &mdash; not a student proposal.</p>
+  </div>
+  <div class="cred-grid">
+    <div class="cred-card"><div class="cred-title">RNLI Electronics Technician, Poole</div><div class="cred-body">Safety-critical marine electronics on Shannon Class lifeboat platforms. RF systems, navigation, sonar, embedded control. Directly analogous operational environment to AURUM SPHERE.</div></div>
+    <div class="cred-card"><div class="cred-title">DRDO Project Grant Recipient (2022&ndash;23)</div><div class="cred-body">Defence Research and Development Organisation funded research. UWB tracking system with custom antenna design. Demonstrates capability to manage defence-funded research deliverables.</div></div>
+    <div class="cred-card"><div class="cred-title">SERB-INAE Finalist &mdash; IIT Kanpur</div><div class="cred-body">National Conclave finalist in RF and signal processing. Peer-assessed technical excellence in the specific domain relevant to the SPHERE-X MAD sensor and SFCW GPR payload.</div></div>
+    <div class="cred-card"><div class="cred-title">UK IPO Provisional Patent &mdash; April 2026</div><div class="cred-body">Eight independent claims filed. Hull geometry, five-layer stealth shell, momentum-wheel drive, MHD propulsion, variable buoyancy, triple attachment, AI sensor fusion, human-in-loop authorisation.</div></div>
+    <div class="cred-card"><div class="cred-title">SC Clearance Eligible</div><div class="cred-body">Full UK right to work. Security Clearance eligible. No restrictions on access to classified DASA documentation or MOD site access for field trials.</div></div>
+    <div class="cred-card"><div class="cred-title">Full Technical Package Available</div><div class="cred-body">Formal Harvard-style research proposal (36 sections). CadQuery parametric CAD assembly (STEP + 23 STL parts). GD&T drawing set (28 sheets). All simulation source code.</div></div>
+  </div>
+</div>
+
+<div id="contact" style="background:var(--surface);border-top:1px solid var(--border);">
+<div class="section">
+  <div class="section-hdr">
+    <span class="eyebrow">06 &mdash; Contact</span>
+    <h2>Request Full Technical Package</h2>
+    <p>The complete formal proposal, CAD assembly, simulation source code, and GD&T documentation are available on request.</p>
+  </div>
+  <div class="contact-block">
+    <div class="contact-row"><span class="contact-key">Name</span><span class="contact-val">Vishal Suresh</span></div>
+    <div class="contact-row"><span class="contact-key">Role</span><span class="contact-val">Electronics Technician, RNLI Poole</span></div>
+    <div class="contact-row"><span class="contact-key">Email</span><span class="contact-val"><a href="mailto:vishalsureshbrit@gmail.com">vishalsureshbrit@gmail.com</a></span></div>
+    <div class="contact-row"><span class="contact-key">Phone</span><span class="contact-val">+44 7778 269913</span></div>
+    <div class="contact-row"><span class="contact-key">Location</span><span class="contact-val">Poole, BH15 4JH, United Kingdom</span></div>
+    <div class="contact-row"><span class="contact-key">GitHub</span><span class="contact-val"><a href="https://github.com/vishaltrx" target="_blank">github.com/vishaltrx</a></span></div>
+    <div class="contact-row"><span class="contact-key">Patent</span><span class="contact-val">UK IPO Provisional &mdash; April 2026 &middot; 8 independent claims</span></div>
+    <div style="margin-top:1.8rem;"><a href="mailto:vishalsureshbrit@gmail.com?subject=AURUM%20SPHERE%20%E2%80%94%20Technical%20Package%20Request" class="btn btn-solid">Request Technical Package &rarr;</a></div>
+  </div>
+</div>
+</div>
+
+<footer>AURUM SPHERE v7.0 &middot; UK IPO Provisional Patent April 2026 &middot; Vishal Suresh &middot; RNLI Poole &middot; CONFIDENTIAL</footer>
+
+</body>
+</html>
