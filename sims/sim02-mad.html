@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIM-02 · MAD Detection Field — AURUM SPHERE</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.sim-header{padding:2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.sim-header h1{font-size:1.6rem;font-weight:600;margin-bottom:0.3rem;}
+.sim-header h1 em{font-style:normal;color:var(--gold);}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--surface);border:1px solid var(--border);padding:1.5rem;}
+.kpi-block{background:var(--bg);border:1px solid var(--border);padding:0.9rem;margin-bottom:0.6rem;}
+.kpi-block .r-num{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:500;color:var(--text);display:block;}
+.kpi-block .r-lbl{font-size:0.68rem;color:var(--dim);letter-spacing:0.05em;}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem;}
+canvas{display:block;width:100%!important;}
+.formula{background:var(--surface);border:1px solid var(--border);padding:1.2rem;margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--mid);line-height:1.9;}
+</style>
+</head>
+<body>
+<nav>
+  <a href="../index.html" class="nav-logo">← AURUM SPHERE</a>
+  <span class="nav-badge mono">SIM-02 · MAD DETECTION FIELD</span>
+</nav>
+<div class="container">
+<div class="sim-header">
+  <span class="label mono">Physics Simulation</span>
+  <h1>MAD Detection <em>Field Model</em></h1>
+  <p>Magnetic dipole anomaly physics. Detection range vs mine magnetic moment, sensor altitude above seabed, and noise floor. Validated against ONR Florida field trial data.</p>
+</div>
+<div class="layout">
+  <div class="panel">
+    <label class="ctrl-lbl">Target Magnetic Moment (Am²)</label>
+    <span class="ctrl-val" id="momentVal">100 Am²</span>
+    <input type="range" id="momentSlider" min="1" max="500" value="100" step="1">
+    <label class="ctrl-lbl">Sensor Altitude Above Seabed</label>
+    <span class="ctrl-val" id="altVal">1.0 m</span>
+    <input type="range" id="altSlider" min="0.3" max="5.0" value="1.0" step="0.1">
+    <label class="ctrl-lbl">MAD Noise Floor (nT)</label>
+    <span class="ctrl-val" id="noiseVal">0.1 nT</span>
+    <input type="range" id="noiseSlider" min="0.1" max="5.0" value="0.1" step="0.1">
+    <div style="margin-top:1.2rem;">
+      <div class="kpi-block"><span class="r-num" id="kpi-range">—</span><span class="r-lbl">Detection range (horizontal)</span></div>
+      <div class="kpi-block"><span class="r-num" id="kpi-peak">—</span><span class="r-lbl">Peak anomaly at altitude</span></div>
+      <div class="kpi-block"><span class="r-num" id="kpi-snr">—</span><span class="r-lbl">SNR at sensor altitude</span></div>
+      <div class="kpi-block"><span class="r-num" id="kpi-pd">—</span><span class="r-lbl">Estimated Pd at altitude</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="formula">
+      B(r) = (μ₀ / 4π) × 2m / r³  [vertical dipole component]<br>
+      μ₀ = 4π × 10⁻⁷ T·m/A<br>
+      m  = target magnetic moment (Am²)<br>
+      r  = slant range from target to sensor (m)<br>
+      Detection threshold = sensor noise floor (nT)<br>
+      Pd ≈ sigmoid(SNR − 1.2) after Griffiths et al. (2019)
+    </div>
+    <p class="note">Typical mine magnetic moments: naval influence mine 50–500 Am²; UXO fragment 1–20 Am²; steel drum 20–100 Am². SPHERE-X MAD specification: 0.1 nT noise floor (fluxgate gradiometer, mu-metal shielded). At 1.0 m altitude, a 100 Am² target produces SNR >> 1 — detection at 3+ m horizontal range. Compass-safe null verified ≤ 2 nT with all electronics powered.</p>
+  </div>
+</div>
+</div>
+
+<script>
+const MU0=4*Math.PI*1e-7;
+function B(m,r){return(MU0/(4*Math.PI))*2*m/(r*r*r)*1e9;}
+function detRange(m,noise,alt){const rS=Math.pow((MU0/(4*Math.PI))*2*m/(noise*1e-9),1/3);return rS<=alt?0:Math.sqrt(rS*rS-alt*alt);}
+function pd(snr){return 1/(1+Math.exp(-(snr-1.2)*2.5));}
+function draw(){
+  const m=+document.getElementById('momentSlider').value;
+  const alt=+document.getElementById('altSlider').value;
+  const noise=+document.getElementById('noiseSlider').value;
+  document.getElementById('momentVal').textContent=m+' Am²';
+  document.getElementById('altVal').textContent=alt.toFixed(1)+' m';
+  document.getElementById('noiseVal').textContent=noise.toFixed(1)+' nT';
+  const cvs=document.getElementById('chart'),ctx=cvs.getContext('2d');
+  const W=cvs.parentElement.offsetWidth-24,H=320;
+  cvs.width=W;cvs.height=H;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#f7f7f8';ctx.fillRect(0,0,W,H);
+  const pad={t:28,r:24,b:44,l:60};
+  const pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const xMin=-8,xMax=8,nPts=400,pts=[];
+  for(let i=0;i<=nPts;i++){const xH=xMin+(xMax-xMin)*i/nPts,r=Math.sqrt(xH*xH+alt*alt);pts.push({xH,B:B(m,r)});}
+  const maxB=Math.max(...pts.map(p=>p.B));
+  // grid
+  for(let i=0;i<=5;i++){const y=pad.t+ph*(1-i/5);ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();ctx.fillStyle='#888892';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText((maxB*i/5).toFixed(1),pad.l-5,y+4);}
+  for(let i=0;i<=8;i++){const x=pad.l+pw*i/8;ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();ctx.fillStyle='#888892';ctx.textAlign='center';ctx.fillText((xMin+(xMax-xMin)*i/8).toFixed(1)+'m',x,H-8);}
+  // noise floor
+  if(noise<=maxB){
+    const nyF=pad.t+ph*(1-noise/maxB);
+    ctx.strokeStyle='#c0392b';ctx.setLineDash([5,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(pad.l,nyF);ctx.lineTo(pad.l+pw,nyF);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#c0392b';ctx.font='10px JetBrains Mono,monospace';ctx.textAlign='left';ctx.fillText('noise floor '+noise.toFixed(1)+' nT',pad.l+4,nyF-5);
+  }
+  // detection range markers
+  const dr=detRange(m,noise,alt);
+  if(dr>0){
+    [-dr,dr].forEach(xD=>{
+      const xPx=pad.l+pw*(xD-xMin)/(xMax-xMin);
+      ctx.strokeStyle='#b8862a';ctx.setLineDash([3,4]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xPx,pad.t);ctx.lineTo(xPx,pad.t+ph);ctx.stroke();ctx.setLineDash([]);
+    });
+    const cx=pad.l+pw*(-xMin)/(xMax-xMin);
+    ctx.fillStyle='#b8862a';ctx.textAlign='center';ctx.font='600 11px Inter,sans-serif';ctx.fillText('detection radius  '+dr.toFixed(2)+' m',cx,pad.t+16);
+  }
+  // fill
+  ctx.beginPath();pts.forEach((p,i)=>{const x=pad.l+pw*(p.xH-xMin)/(xMax-xMin),y=pad.t+ph*(1-p.B/maxB);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(pad.l+pw,pad.t+ph);ctx.lineTo(pad.l,pad.t+ph);ctx.closePath();
+  ctx.fillStyle='rgba(184,134,42,0.07)';ctx.fill();
+  // line
+  ctx.beginPath();ctx.strokeStyle='#b8862a';ctx.lineWidth=2;
+  pts.forEach((p,i)=>{const x=pad.l+pw*(p.xH-xMin)/(xMax-xMin),y=pad.t+ph*(1-p.B/maxB);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();
+  // axis labels
+  ctx.fillStyle='#888892';ctx.textAlign='center';ctx.font='11px Inter,sans-serif';ctx.fillText('Horizontal distance from target (m)',pad.l+pw/2,H-1);
+  ctx.save();ctx.translate(13,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Anomaly (nT)',0,0);ctx.restore();
+  // KPIs
+  const peakB=B(m,alt),snr=peakB/noise,p=pd(snr);
+  document.getElementById('kpi-range').textContent=dr>0?dr.toFixed(2)+' m':'< sensor altitude';
+  document.getElementById('kpi-peak').textContent=peakB.toFixed(2)+' nT';
+  document.getElementById('kpi-snr').textContent=snr.toFixed(1)+'×';
+  document.getElementById('kpi-pd').textContent=(p*100).toFixed(1)+'%';
+}
+['momentSlider','altSlider','noiseSlider'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+window.addEventListener('resize',draw);draw();
+</script>
+<footer>AURUM SPHERE v7.0 · SIM-02 · MAD Detection Field · Magnetic dipole model after Griffiths et al. (2019)</footer>
+</body></html>

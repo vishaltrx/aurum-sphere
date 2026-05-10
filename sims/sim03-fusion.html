@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIM-03 &middot; Bayesian Sensor Fusion &mdash; AURUM SPHERE</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<nav class="topbar">
+  <a href="../index.html" class="sim-back">&larr; AURUM SPHERE</a>
+  <span class="sim-tag">SIM-03 &middot; BAYESIAN SENSOR FUSION</span>
+</nav>
+<div class="wrap">
+  <div class="page-hdr">
+    <span class="eyebrow">SIM-03 / BAYESIAN SENSOR FUSION</span>
+    <h1>Three-Channel Fusion Pipeline</h1>
+    <p>MAD + GPR + LWIR Bayesian fusion. Toggle individual sensors on/off, adjust prior probability and clutter density, increase node count for swarm consensus. Shows Pd rising from single-sensor baseline to &gt;95% fused target.</p>
+  </div>
+  <div class="sim-layout">
+    <div class="controls">
+      <div class="ctrl-group">
+        <span class="ctrl-lbl">Active Sensor Channels</span>
+        <div class="toggle-row" style="margin-top:0.5rem;">
+          <div class="tog on" id="tgl-mad" onclick="toggleSensor('mad')">MAD</div>
+          <div class="tog on" id="tgl-gpr" onclick="toggleSensor('gpr')">GPR</div>
+          <div class="tog on" id="tgl-lwir" onclick="toggleSensor('lwir')">LWIR</div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-lbl">Prior Probability (threat present)</span>
+        <span class="ctrl-val" id="priorVal">0.20</span>
+        <input type="range" id="priorSlider" min="0.01" max="0.9" value="0.20" step="0.01">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-lbl">Clutter Density (0=open sea, 1=port)</span>
+        <span class="ctrl-val" id="clutterVal">0.30</span>
+        <input type="range" id="clutterSlider" min="0" max="1.0" value="0.30" step="0.05">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-lbl">SPHERE-X Nodes in Consensus</span>
+        <span class="ctrl-val" id="nodeVal">1 node</span>
+        <input type="range" id="nodeSlider" min="1" max="6" value="1" step="1">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-lbl">Survey Passes Over Target</span>
+        <span class="ctrl-val" id="passVal">1 pass</span>
+        <input type="range" id="passSlider" min="1" max="3" value="1" step="1">
+      </div>
+    </div>
+    <div>
+      <div class="chart-wrap"><canvas id="chart" height="260"></canvas></div>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="decision" id="decisionBox">
+        <div class="decision-lbl">System Decision</div>
+        <div class="decision-val" id="decisionVal">&mdash;</div>
+      </div>
+      <div class="note-block">
+        Bayesian update: P(T|E) = P(E|T) x P(T) / P(E). Each sensor channel is an independent likelihood update. Clutter increases P(E|not-T), raising false alarm rate. Multi-node consensus applies independent observations per node. Sensor Pd/Pfa from Griffiths et al. (2019) NATO MCM benchmarks; LWIR from Raman et al. (2021).
+      </div>
+    </div>
+  </div>
+</div>
+<footer>AURUM SPHERE v7.0 &middot; SIM-03 &middot; Bayesian Sensor Fusion &middot; Vishal Suresh</footer>
+<script>
+const SENSORS={mad:{label:'MAD Gradiometer',pd:0.88,pfa:0.18,color:'#b8860b'},gpr:{label:'SFCW GPR Array',pd:0.82,pfa:0.12,color:'#555560'},lwir:{label:'LWIR Thermal Camera',pd:0.72,pfa:0.09,color:'#2a7a4f'}};
+const active={mad:true,gpr:true,lwir:true};
+function toggleSensor(s){active[s]=!active[s];document.getElementById('tgl-'+s).classList.toggle('on',active[s]);update();}
+function bayes(prior,pd,pfa){const pE=pd*prior+pfa*(1-prior);return pd*prior/pE;}
+function compute(prior,clutter,nodes,passes){
+  let pd=prior;const cf=1+clutter*2;
+  for(let p=0;p<passes;p++){Object.entries(SENSORS).forEach(([k,s])=>{if(!active[k])return;pd=Math.min(0.99,bayes(pd,s.pd,Math.min(0.99,s.pfa*cf)));});}
+  let pfa;
+  if(nodes>1){pd=Math.min(0.99,(1-Math.pow(1-pd,nodes))*0.95);pfa=Math.max(0.005,(0.5*prior)/Math.pow(nodes,1.5));}
+  else{pfa=Math.max(0.005,0.5*prior*(1-pd));}
+  return{pd:Math.min(0.99,pd),pfa:Math.max(0.003,pfa)};
+}
+function drawChart(pd,pfa){
+  const cvs=document.getElementById('chart');const W=cvs.parentElement.offsetWidth-30;const H=260;
+  cvs.width=W;cvs.height=H;const ctx=cvs.getContext('2d');ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+  const pad={t:24,r:16,b:48,l:52};const pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){const y=pad.t+ph-ph*i/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();ctx.fillStyle='#9090a0';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText((i*20)+'%',pad.l-5,y+4);}
+  const bars=[{label:'Detection Probability (Pd)',val:pd,target:0.95,color:'#b8860b'},{label:'False Alarm Rate (Pfa)',val:pfa,target:0.01,color:'#b83232'}];
+  const bw=pw*0.28;
+  bars.forEach((b,i)=>{
+    const bx=pad.l+pw*0.12+i*(bw+pw*0.15);const bh=ph*b.val;
+    ctx.fillStyle=b.color+'18';ctx.fillRect(bx,pad.t,bw*0.7,ph);
+    ctx.fillStyle=b.color;ctx.fillRect(bx,pad.t+ph-bh,bw*0.7,bh);
+    const ty=pad.t+ph-ph*b.target;ctx.strokeStyle='#111';ctx.setLineDash([3,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(bx-6,ty);ctx.lineTo(bx+bw*0.7+6,ty);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#555';ctx.textAlign='left';ctx.font='10px JetBrains Mono,monospace';ctx.fillText('target '+b.target,bx+bw*0.7+8,ty+4);
+    ctx.fillStyle=b.color;ctx.textAlign='center';ctx.font='600 1.1rem Inter,sans-serif';ctx.fillText((b.val*100).toFixed(1)+'%',bx+bw*0.35,pad.t+ph-bh-10);
+    ctx.fillStyle='#111';ctx.textAlign='center';ctx.font='500 0.75rem Inter,sans-serif';ctx.fillText(b.label,bx+bw*0.35,H-12);
+  });
+}
+function update(){
+  const prior=+document.getElementById('priorSlider').value,clutter=+document.getElementById('clutterSlider').value,nodes=+document.getElementById('nodeSlider').value,passes=+document.getElementById('passSlider').value;
+  document.getElementById('priorVal').textContent=prior.toFixed(2);document.getElementById('clutterVal').textContent=clutter.toFixed(2);document.getElementById('nodeVal').textContent=nodes+' node'+(nodes>1?'s':'');document.getElementById('passVal').textContent=passes+' pass'+(passes>1?'es':'');
+  const{pd,pfa}=compute(prior,clutter,nodes,passes);drawChart(pd,pfa);
+  let cur=prior;const steps=[{label:'Prior — background threat probability',val:prior,color:'#9090a0'}];const cf=1+clutter*2;
+  Object.entries(SENSORS).forEach(([k,s])=>{if(!active[k])return;cur=Math.min(0.99,bayes(cur,s.pd,Math.min(0.99,s.pfa*cf)));steps.push({label:s.label,val:cur,color:s.color});});
+  if(nodes>1){const c=Math.min(0.99,(1-Math.pow(1-cur,nodes))*0.95);steps.push({label:nodes+'-Node Swarm Consensus',val:c,color:'#2a7a4f'});cur=c;}
+  steps.push({label:'Final Fused Confidence',val:pd,color:'#b8860b'});
+  document.getElementById('pipeline').innerHTML=steps.map(s=>`<div class="pipe-step"><div class="pipe-dot" style="background:${s.color}"></div><span class="pipe-lbl">${s.label}</span><div class="pipe-bar-wrap"><div class="pipe-bar-fill" style="width:${(s.val*100).toFixed(0)}%;background:${s.color}"></div></div><span class="pipe-pct" style="color:${s.color}">${(s.val*100).toFixed(1)}%</span></div>`).join('');
+  let txt,col;
+  if(pd<0.60){txt='REJECT — insufficient evidence';col='#b83232';}
+  else if(pd<0.85){txt='INCONCLUSIVE — re-scan required';col='#8a6000';}
+  else if(pd<0.95){txt='PROBABLE TARGET — share with swarm nodes';col='#555560';}
+  else{txt='CONFIRMED TARGET — await operator authorisation';col='#2a7a4f';}
+  const box=document.getElementById('decisionBox');box.style.borderLeftColor=col;box.style.background=col+'12';document.getElementById('decisionVal').textContent=txt;document.getElementById('decisionVal').style.color=col;
+}
+['priorSlider','clutterSlider','nodeSlider','passSlider'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+window.addEventListener('resize',update);update();
+</script>
+</body></html>

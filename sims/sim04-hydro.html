@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIM-04 · Hydrodynamics & Drag — AURUM SPHERE</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.sim-header{padding:2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.sim-header h1{font-size:1.6rem;font-weight:600;margin-bottom:0.3rem;}
+.sim-header h1 em{font-style:normal;color:var(--gold);}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--surface);border:1px solid var(--border);padding:1.5rem;}
+.kb{background:var(--bg);border:1px solid var(--border);padding:0.9rem;margin-bottom:0.6rem;}
+.kb .n{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:500;color:var(--text);display:block;}
+.kb .l{font-size:0.68rem;color:var(--dim);}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem;}
+canvas{display:block;width:100%!important;}
+.spd-row{display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;}
+.spd{padding:0.4rem 0.8rem;font-size:0.72rem;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--mid);font-family:'JetBrains Mono',monospace;transition:all 0.15s;}
+.spd.on,.spd:hover{background:var(--text);color:#fff;border-color:var(--text);}
+.formula{background:var(--surface);border:1px solid var(--border);padding:1.2rem;margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--mid);line-height:1.9;}
+</style>
+</head>
+<body>
+<nav>
+  <a href="../index.html" class="nav-logo">← AURUM SPHERE</a>
+  <span class="nav-badge mono">SIM-04 · HYDRODYNAMICS & DRAG</span>
+</nav>
+<div class="container">
+<div class="sim-header">
+  <span class="label mono">Physics Simulation</span>
+  <h1>Hydrodynamics <em>& Drag</em></h1>
+  <p>Sphere drag at the SPHERE-X operational Reynolds number. Thrust, power, and endurance tradeoffs. Oblate Cd = 0.38 versus sphere Cd = 0.47.</p>
+</div>
+<div class="layout">
+  <div class="panel">
+    <label class="ctrl-lbl">Sphere Diameter</label>
+    <span class="ctrl-val" id="diaVal">0.32 m</span>
+    <input type="range" id="diaSlider" min="0.20" max="0.50" value="0.32" step="0.01">
+    <label class="ctrl-lbl">Operating Speed</label>
+    <span class="ctrl-val" id="speedVal">0.30 m/s</span>
+    <input type="range" id="speedSlider" min="0.05" max="1.5" value="0.30" step="0.01">
+    <label class="ctrl-lbl">Thruster Efficiency η</label>
+    <span class="ctrl-val" id="etaVal">72%</span>
+    <input type="range" id="etaSlider" min="40" max="90" value="72" step="1">
+    <label class="ctrl-lbl">Battery Usable</label>
+    <span class="ctrl-val" id="battVal">90 Wh</span>
+    <input type="range" id="battSlider" min="50" max="135" value="90" step="1">
+    <div style="margin-top:1.2rem;">
+      <div class="kb"><span class="n" id="kd">—</span><span class="l">Drag force</span></div>
+      <div class="kb"><span class="n" id="kt">—</span><span class="l">Thruster power required</span></div>
+      <div class="kb"><span class="n" id="kp">—</span><span class="l">Total power (propulsion + hotel)</span></div>
+      <div class="kb"><span class="n" id="ke">—</span><span class="l">Endurance at selected speed</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="chart-wrap"><canvas id="chart" height="300"></canvas></div>
+    <div class="spd-row">
+      <button class="spd on" data-v="0.3">0.30 m/s — seabed search</button>
+      <button class="spd" data-v="0.5">0.50 m/s — transit</button>
+      <button class="spd" data-v="0.8">0.80 m/s — sea surface</button>
+      <button class="spd" data-v="1.2">1.20 m/s — sprint</button>
+    </div>
+    <div class="formula">
+      F_drag  = 0.5 × Cd × ρ × A × v²<br>
+      Cd (SPHERE-X oblate) = 0.38   ←  19% less than sphere<br>
+      Cd (sphere worst-case) = 0.47<br>
+      ρ (seawater 3.5%) = 1,025 kg/m³<br>
+      A = π(d/2)²  frontal area<br>
+      P_prop = F_drag × v / η<br>
+      P_total = P_prop + 5.95 W hotel load<br>
+      Endurance = Battery / P_total
+    </div>
+    <p class="note">At 0.3 m/s drag is approximately 0.05 N and propulsion power approximately 0.02 W. Total draw is hotel-load dominated. At 1.0 m/s drag power rises to ~50 W — endurance collapses. The 0.3 m/s seabed search speed maximises area coverage per Wh. Oblate geometry (Cd = 0.38) per Pebody (2008): 22–31% drag reduction over cylindrical vehicles of equivalent volume.</p>
+  </div>
+</div>
+</div>
+<script>
+const Cd=0.38,rho=1025,HOTEL=5.95;
+function drag(d,v){return 0.5*Cd*rho*Math.PI*(d/2)**2*v*v;}
+function pT(d,v,e){return drag(d,v)*v/(e/100);}
+document.querySelectorAll('.spd').forEach(btn=>btn.addEventListener('click',()=>{
+  document.getElementById('speedSlider').value=btn.dataset.v;
+  document.querySelectorAll('.spd').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');update();
+}));
+function draw(){
+  const d=+document.getElementById('diaSlider').value,v=+document.getElementById('speedSlider').value,e=+document.getElementById('etaSlider').value,b=+document.getElementById('battSlider').value;
+  const cvs=document.getElementById('chart'),ctx=cvs.getContext('2d');
+  const W=cvs.parentElement.offsetWidth-24,H=300;cvs.width=W;cvs.height=H;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#f7f7f8';ctx.fillRect(0,0,W,H);
+  const pad={t:36,r:24,b:44,l:56},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b,vMax=1.5,nP=300;
+  const S=[{l:'Thruster Power (W)',pts:[],c:'#b8862a'},{l:'Total Power (W)',pts:[],c:'#c0392b'},{l:'Endurance ×10 (h)',pts:[],c:'#1a4a8a'}];
+  for(let i=0;i<=nP;i++){const vi=vMax*i/nP,tp=pT(d,vi,e),tot=tp+HOTEL;S[0].pts.push(tp);S[1].pts.push(tot);S[2].pts.push(b/tot*10);}
+  const maxY=Math.min(120,Math.max(...S.flatMap(s=>s.pts)));
+  for(let i=0;i<=5;i++){const y=pad.t+ph*(1-i/5);ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();ctx.fillStyle='#888892';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText((maxY*i/5).toFixed(0),pad.l-5,y+4);}
+  for(let i=0;i<=6;i++){const x=pad.l+pw*i/6;ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();ctx.fillStyle='#888892';ctx.textAlign='center';ctx.fillText((vMax*i/6).toFixed(2),x,H-8);}
+  ctx.fillStyle='#888892';ctx.textAlign='center';ctx.font='11px Inter,sans-serif';ctx.fillText('Speed (m/s)',pad.l+pw/2,H-1);
+  const ox=pad.l+pw*(0.3/vMax);ctx.strokeStyle='#1a7a3e';ctx.setLineDash([4,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(ox,pad.t+16);ctx.lineTo(ox,pad.t+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#1a7a3e';ctx.textAlign='center';ctx.font='600 10px Inter,sans-serif';ctx.fillText('optimal search 0.30 m/s',ox,pad.t+12);
+  const cx=pad.l+pw*(v/vMax);ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,pad.t);ctx.lineTo(cx,pad.t+ph);ctx.stroke();
+  S.forEach((s,si)=>{ctx.beginPath();ctx.strokeStyle=s.c;ctx.lineWidth=2;s.pts.forEach((y,i)=>{const px=pad.l+pw*(i/nP),py=pad.t+ph*(1-Math.min(y,maxY)/maxY);i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});ctx.stroke();});
+  S.forEach((s,si)=>{ctx.fillStyle=s.c;ctx.fillRect(pad.l+si*145,pad.t+10,16,2.5);ctx.fillStyle='#111116';ctx.font='600 11px Inter,sans-serif';ctx.textAlign='left';ctx.fillText(s.l,pad.l+si*145+20,pad.t+15);});
+  const F=drag(d,v),tp=pT(d,v,e),tot=tp+HOTEL;
+  document.getElementById('kd').textContent=F.toFixed(5)+' N';document.getElementById('kt').textContent=tp.toFixed(4)+' W';document.getElementById('kp').textContent=tot.toFixed(2)+' W';document.getElementById('ke').textContent=(b/tot).toFixed(2)+' h';
+}
+function update(){
+  const d=+document.getElementById('diaSlider').value,v=+document.getElementById('speedSlider').value,e=+document.getElementById('etaSlider').value,b=+document.getElementById('battSlider').value;
+  document.getElementById('diaVal').textContent=d.toFixed(2)+' m';document.getElementById('speedVal').textContent=v.toFixed(2)+' m/s';document.getElementById('etaVal').textContent=e+'%';document.getElementById('battVal').textContent=b+' Wh';
+  draw();
+}
+['diaSlider','speedSlider','etaSlider','battSlider'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+window.addEventListener('resize',update);update();
+</script>
+<footer>AURUM SPHERE v7.0 · SIM-04 · Hydrodynamics & Drag · After Pebody (2008), Cd values confirmed by OpenFOAM RANS k-ω SST</footer>
+</body></html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIM-01 · Energy & Endurance — AURUM SPHERE</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.sim-header{padding:2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.sim-header h1{font-size:1.6rem;font-weight:600;margin-bottom:0.3rem;}
+.sim-header h1 em{font-style:normal;color:var(--gold);}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--surface);border:1px solid var(--border);padding:1.5rem;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:1.2rem;}
+.result-cell{background:var(--bg);padding:1rem;}
+.r-num{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:500;color:var(--text);display:block;}
+.r-lbl{font-size:0.68rem;color:var(--dim);letter-spacing:0.05em;}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem;}
+canvas{display:block;width:100%!important;}
+.mode-table th{background:var(--surface);}
+</style>
+</head>
+<body>
+<nav>
+  <a href="../index.html" class="nav-logo">← AURUM SPHERE</a>
+  <span class="nav-badge mono">SIM-01 · ENERGY & ENDURANCE</span>
+</nav>
+<div class="container">
+<div class="sim-header">
+  <span class="label mono">Physics Simulation</span>
+  <h1>Energy & <em>Endurance</em></h1>
+  <p>Battery depletion model across all six mission modes. All values from published datasheets. Adjust parameters to explore tradeoffs.</p>
+</div>
+<div class="layout">
+  <div class="panel">
+    <label class="ctrl-lbl">Battery Capacity</label>
+    <span class="ctrl-val" id="battVal">90 Wh</span>
+    <input type="range" id="battSlider" min="72" max="135" value="90" step="1">
+    <label class="ctrl-lbl">Mission Mode</label>
+    <select id="modeSelect">
+      <option value="seabed">Seabed Search (MAD + GPR + LWIR)</option>
+      <option value="beach">Beach Traverse</option>
+      <option value="transit">Sea-Surface Transit</option>
+      <option value="loiter">Low-Power Loiter</option>
+      <option value="beached">Beached Sentinel</option>
+      <option value="relay">Surface Relay Node</option>
+    </select>
+    <label class="ctrl-lbl">Depth of Discharge Limit</label>
+    <span class="ctrl-val" id="dodVal">80%</span>
+    <input type="range" id="dodSlider" min="60" max="95" value="80" step="5">
+    <div class="result-grid">
+      <div class="result-cell"><span class="r-num" id="usableWh">—</span><span class="r-lbl">Usable energy</span></div>
+      <div class="result-cell"><span class="r-num" id="totalPower">—</span><span class="r-lbl">Total power draw</span></div>
+      <div class="result-cell"><span class="r-num" id="endurance">—</span><span class="r-lbl">Endurance</span></div>
+      <div class="result-cell"><span class="r-num" id="rangeKm">—</span><span class="r-lbl">Range at speed</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="chart-wrap"><canvas id="chart" height="280"></canvas></div>
+    <p class="note" style="margin-top:1rem;">Hotel load breakdown: MAD 0.8 W + GPR 3.0 W (duty-cycled) + LWIR 0.5 W + STM32H7 0.5 W + radio standby 0.5 W + Coral Edge TPU 0.5 W + BMS 0.15 W = 5.95 W total sensor/compute load. Propulsion power from sphere drag physics (Cd = 0.38, ρ = 1025 kg/m³). Amprius SiMaxx 450 Wh/kg baseline; SiCore 135 Wh 450 Wh/kg (MOD/NDAA qualified April 2025) shown as upgrade column.</p>
+  </div>
+</div>
+
+<div style="margin-top:3rem;">
+<table>
+  <thead><tr><th>Mode</th><th>Power (W)</th><th>Endurance — 90 Wh</th><th>Endurance — 135 Wh</th><th>Speed</th></tr></thead>
+  <tbody id="modeBody"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+const MODES={
+  seabed: {label:'Seabed Search',  power:14.0, speed:0.3},
+  beach:  {label:'Beach Traverse', power:16.0, speed:0.5},
+  transit:{label:'Sea-Surface Transit',power:11.0,speed:0.8},
+  loiter: {label:'Low-Power Loiter',power:7.0, speed:0.05},
+  beached:{label:'Beached Sentinel',power:5.95,speed:0},
+  relay:  {label:'Surface Relay Node',power:8.5,speed:0},
+};
+function draw(batt,dod,mode){
+  const m=MODES[mode],usable=batt*(dod/100),endH=usable/m.power;
+  const cvs=document.getElementById('chart'),ctx=cvs.getContext('2d');
+  const W=cvs.parentElement.offsetWidth-24,H=280;
+  cvs.width=W;cvs.height=H;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#f7f7f8';ctx.fillRect(0,0,W,H);
+  const pad={t:28,r:24,b:44,l:52},pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  const pts=200,times=Array.from({length:pts+1},(_,i)=>i*endH/pts);
+  const pcts=times.map(t=>Math.max(0,(usable-m.power*t)/batt*100));
+  // grid
+  for(let i=0;i<=5;i++){
+    const y=pad.t+ph*(1-i/5);
+    ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw,y);ctx.stroke();
+    ctx.fillStyle='#888892';ctx.font='11px JetBrains Mono,monospace';ctx.textAlign='right';ctx.fillText((i*20)+'%',pad.l-6,y+4);
+  }
+  for(let i=0;i<=5;i++){
+    const x=pad.l+pw*i/5;
+    ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph);ctx.stroke();
+    ctx.fillStyle='#888892';ctx.textAlign='center';ctx.fillText((endH*i/5).toFixed(1)+'h',x,H-8);
+  }
+  // DoD line
+  const dodY=pad.t+ph*(1-(100-dod)/100);
+  ctx.strokeStyle='#c0392b';ctx.setLineDash([4,4]);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,dodY);ctx.lineTo(pad.l+pw,dodY);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#c0392b';ctx.font='10px JetBrains Mono,monospace';ctx.textAlign='left';ctx.fillText('DoD limit '+dod+'%',pad.l+4,dodY-5);
+  // fill area
+  ctx.beginPath();
+  times.forEach((t,i)=>{const x=pad.l+pw*(t/endH),y=pad.t+ph*(1-pcts[i]/100);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(pad.l+pw,pad.t+ph);ctx.lineTo(pad.l,pad.t+ph);ctx.closePath();
+  ctx.fillStyle='rgba(184,134,42,0.08)';ctx.fill();
+  // line
+  ctx.beginPath();ctx.strokeStyle='#b8862a';ctx.lineWidth=2;
+  times.forEach((t,i)=>{const x=pad.l+pw*(t/endH),y=pad.t+ph*(1-pcts[i]/100);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+  // labels
+  ctx.fillStyle='#888892';ctx.textAlign='center';ctx.font='11px Inter,sans-serif';ctx.fillText('Time (hours)',pad.l+pw/2,H-1);
+  ctx.save();ctx.translate(13,pad.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Battery %',0,0);ctx.restore();
+  ctx.fillStyle='#111116';ctx.textAlign='left';ctx.font='600 12px Inter,sans-serif';ctx.fillText(m.label+' — '+m.power+' W · '+endH.toFixed(1)+' h endurance',pad.l,pad.t-8);
+  // update KPIs
+  document.getElementById('usableWh').textContent=(batt*(dod/100)).toFixed(0)+' Wh';
+  document.getElementById('totalPower').textContent=m.power+' W';
+  document.getElementById('endurance').textContent=endH.toFixed(2)+' h';
+  document.getElementById('rangeKm').textContent=m.speed>0?(m.speed*endH*3.6).toFixed(2)+' km':'n/a';
+}
+function buildTable(batt,dod){
+  document.getElementById('modeBody').innerHTML=Object.entries(MODES).map(([k,m])=>{
+    const u=batt*(dod/100),e90=(u/m.power).toFixed(1),e135=(135*0.8/m.power).toFixed(1);
+    return`<tr><td>${m.label}</td><td class="mono">${m.power} W</td><td class="mono">${e90} h</td><td class="mono" style="color:var(--dim)">${e135} h</td><td class="mono">${m.speed>0?m.speed+' m/s':'—'}</td></tr>`;
+  }).join('');
+}
+function update(){
+  const b=+document.getElementById('battSlider').value,d=+document.getElementById('dodSlider').value,m=document.getElementById('modeSelect').value;
+  document.getElementById('battVal').textContent=b+' Wh';document.getElementById('dodVal').textContent=d+'%';
+  draw(b,d,m);buildTable(b,d);
+}
+['battSlider','dodSlider','modeSelect'].forEach(id=>document.getElementById(id).addEventListener('input',update));
+window.addEventListener('resize',update);update();
+</script>
+<footer>AURUM SPHERE v7.0 · SIM-01 · Energy & Endurance Model · Physics values from Amprius datasheet and drag equations</footer>
+</body></html>

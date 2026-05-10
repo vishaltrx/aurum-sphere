@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIM-05 · Swarm Coverage — AURUM SPHERE</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.sim-header{padding:2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.sim-header h1{font-size:1.6rem;font-weight:600;margin-bottom:0.3rem;}
+.sim-header h1 em{font-style:normal;color:var(--gold);}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start;}
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--surface);border:1px solid var(--border);padding:1.5rem;}
+.kb{background:var(--bg);border:1px solid var(--border);padding:0.9rem;margin-bottom:0.6rem;}
+.kb .n{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:500;color:var(--text);display:block;}
+.kb .l{font-size:0.68rem;color:var(--dim);}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem;}
+canvas{display:block;}
+.btn-row{display:flex;gap:0.6rem;margin-top:1rem;}
+.cbtn{padding:0.5rem 1.2rem;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--mid);font-family:'Inter',sans-serif;transition:all 0.15s;}
+.cbtn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+.cbtn:hover{background:var(--text);color:#fff;border-color:var(--text);}
+.legend-row{display:flex;gap:1.2rem;margin-top:1rem;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--dim);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<nav>
+  <a href="../index.html" class="nav-logo">← AURUM SPHERE</a>
+  <span class="nav-badge mono">SIM-05 · SWARM COVERAGE</span>
+</nav>
+<div class="container">
+<div class="sim-header">
+  <span class="label mono">Physics Simulation</span>
+  <h1>Swarm <em>Coverage & Comms</em></h1>
+  <p>Animated lawnmower search pattern with acoustic communications network. Real acoustic range physics. Shows area coverage rate vs node count. One relay node holds surface position.</p>
+</div>
+<div class="layout">
+  <div class="panel">
+    <label class="ctrl-lbl">Search Nodes</label>
+    <span class="ctrl-val" id="nodeVal">2 nodes</span>
+    <input type="range" id="nodeSlider" min="1" max="6" value="2" step="1">
+    <label class="ctrl-lbl">Acoustic Comms Range</label>
+    <span class="ctrl-val" id="acousticVal">150 m</span>
+    <input type="range" id="acousticSlider" min="50" max="300" value="150" step="10">
+    <label class="ctrl-lbl">Search Speed</label>
+    <span class="ctrl-val" id="speedVal">0.30 m/s</span>
+    <input type="range" id="speedSlider" min="0.1" max="0.8" value="0.3" step="0.05">
+    <label class="ctrl-lbl">MAD Swath Width</label>
+    <span class="ctrl-val" id="swathVal">2.0 m</span>
+    <input type="range" id="swathSlider" min="0.5" max="4.0" value="2.0" step="0.1">
+    <div style="margin-top:1.2rem;">
+      <div class="kb"><span class="n" id="kArea">—</span><span class="l">Area cleared (m²)</span></div>
+      <div class="kb"><span class="n" id="kRate">—</span><span class="l">Coverage rate (m²/h)</span></div>
+      <div class="kb"><span class="n" id="kComms">—</span><span class="l">Nodes in comms range</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="cbtn primary" id="playBtn" onclick="togglePlay()">Run</button>
+      <button class="cbtn" onclick="doReset()">Reset</button>
+    </div>
+    <div class="legend-row">
+      <div class="leg"><div class="leg-dot" style="background:#b8862a"></div>Search node</div>
+      <div class="leg"><div class="leg-dot" style="background:#1a4a8a"></div>Relay node</div>
+      <div class="leg"><div class="leg-dot" style="background:rgba(26,122,62,0.5)"></div>In comms</div>
+      <div class="leg"><div class="leg-dot" style="background:rgba(192,57,43,0.5)"></div>Out of range</div>
+    </div>
+  </div>
+  <div>
+    <div class="chart-wrap">
+      <canvas id="swarmCanvas"></canvas>
+    </div>
+    <p class="note">Relay node holds surface at (200m, 30m). Acoustic range in littoral conditions: 50–200 m realistic (JASA 2023). Lawnmower pattern at selected speed and swath width. Coverage = nodes × speed × swath × time. Dead zone: nodes beyond acoustic range with no relay path. Operational zone shown: 400 × 400 m.</p>
+  </div>
+</div>
+</div>
+
+<script>
+let animId=null,running=false,t=0,cleared=[];
+const W_W=400,H_W=400;
+const pad={t:24,r:24,b:40,l:48};
+function pw(W){return W-pad.l-pad.r;}
+function ph(H){return H-pad.t-pad.b;}
+function wx(x,W){return pad.l+(x/W_W)*pw(W);}
+function wy(y,H){return pad.t+(y/H_W)*ph(H);}
+function getP(){return{nodes:+document.getElementById('nodeSlider').value,acoustic:+document.getElementById('acousticSlider').value,speed:+document.getElementById('speedSlider').value,swath:+document.getElementById('swathSlider').value};}
+function nodePos(n,nodes,t,speed,swath){
+  const laneH=swath*2,nLanes=Math.floor(H_W/laneH),laneT=W_W/speed,offset=n*(W_W*2/nodes);
+  const tot=t+offset,lane=Math.floor(tot/laneT)%nLanes,inL=tot%laneT;
+  const x=lane%2===0?inL*speed:W_W-inL*speed,y=60+lane*laneH+swath;
+  return{x:Math.min(W_W,Math.max(0,x)),y:Math.min(H_W,Math.max(0,y))};
+}
+function draw(){
+  const{nodes,acoustic,speed,swath}=getP();
+  const cvs=document.getElementById('swarmCanvas');
+  const W=cvs.parentElement.offsetWidth-24,H=Math.min(420,W*0.75);
+  cvs.width=W;cvs.height=H;
+  const ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#f7f7f8';ctx.fillRect(0,0,W,H);
+  // grid
+  for(let i=0;i<=4;i++){const x=pad.l+pw(W)*i/4;ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+ph(H));ctx.stroke();ctx.fillStyle='#888892';ctx.font='10px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText((W_W*i/4)+'m',x,H-6);}
+  for(let i=0;i<=4;i++){const y=pad.t+ph(H)*i/4;ctx.strokeStyle='#e4e4e8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+pw(W),y);ctx.stroke();ctx.fillStyle='#888892';ctx.textAlign='right';ctx.fillText((H_W*i/4)+'m',pad.l-3,y+4);}
+  // cleared path
+  if(cleared.length>1){ctx.beginPath();ctx.strokeStyle='rgba(184,134,42,0.15)';ctx.lineWidth=swath/W_W*pw(W)*2;cleared.forEach((p,i)=>{i===0?ctx.moveTo(wx(p.x,W),wy(p.y,H)):ctx.lineTo(wx(p.x,W),wy(p.y,H));});ctx.stroke();}
+  // relay
+  const rX=200,rY=30;const rxP=wx(rX,W),ryP=wy(rY,H);
+  const aPx=acoustic/W_W*pw(W);
+  ctx.beginPath();ctx.arc(rxP,ryP,aPx,0,Math.PI*2);ctx.fillStyle='rgba(26,74,138,0.04)';ctx.fill();ctx.strokeStyle='rgba(26,74,138,0.2)';ctx.setLineDash([5,4]);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+  // search nodes
+  let inComms=0;
+  for(let n=0;n<nodes;n++){
+    const pos=nodePos(n,nodes,t,speed,swath);
+    const px=wx(pos.x,W),py=wy(pos.y,H);
+    const dist=Math.sqrt((pos.x-rX)**2+(pos.y-rY)**2),inR=dist<=acoustic;
+    if(inR)inComms++;
+    // swath band
+    const sw=swath/W_W*pw(W);
+    ctx.fillStyle='rgba(184,134,42,0.05)';ctx.fillRect(px-sw,pad.t,sw*2,ph(H));
+    // comms line
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(rxP,ryP);ctx.strokeStyle=inR?'rgba(26,122,62,0.4)':'rgba(192,57,43,0.3)';ctx.setLineDash([4,4]);ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+    // node
+    ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fillStyle='#b8862a';ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='600 9px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('S'+(n+1),px,py+3);
+  }
+  // relay dot
+  ctx.beginPath();ctx.arc(rxP,ryP,8,0,Math.PI*2);ctx.fillStyle='#1a4a8a';ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='600 9px Inter,sans-serif';ctx.textAlign='center';ctx.fillText('R',rxP,ryP+3);
+  // KPIs
+  const timeH=t/3600,area=Math.min(W_W*H_W,nodes*speed*3600*swath*timeH);
+  document.getElementById('kArea').textContent=area.toFixed(0)+' m²';
+  document.getElementById('kRate').textContent=(nodes*speed*3600*swath).toFixed(0)+' m²/h';
+  document.getElementById('kComms').textContent=inComms+' / '+nodes;
+  // time label
+  const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=Math.floor(t%60);
+  ctx.fillStyle='#888892';ctx.textAlign='left';ctx.font='600 10px JetBrains Mono,monospace';
+  ctx.fillText('T = '+h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s   |   '+nodes+' nodes + 1 relay   |   acoustic range '+acoustic+' m',pad.l,pad.t-6);
+  // labels update
+  document.getElementById('nodeVal').textContent=nodes+' node'+(nodes>1?'s':'');
+  document.getElementById('acousticVal').textContent=acoustic+' m';
+  document.getElementById('speedVal').textContent=speed.toFixed(2)+' m/s';
+  document.getElementById('swathVal').textContent=swath.toFixed(1)+' m';
+}
+function step(){
+  const{speed,swath,nodes}=getP();
+  t+=30;
+  for(let n=0;n<nodes;n++){const p=nodePos(n,nodes,t,speed,swath);cleared.push({x:p.x,y:p.y});}
+  if(cleared.length>600)cleared=cleared.slice(-600);
+  draw();animId=requestAnimationFrame(step);
+}
+function togglePlay(){
+  running=!running;document.getElementById('playBtn').textContent=running?'Pause':'Run';
+  if(running)step();else cancelAnimationFrame(animId);
+}
+function doReset(){running=false;t=0;cleared=[];cancelAnimationFrame(animId);document.getElementById('playBtn').textContent='Run';draw();}
+['nodeSlider','acousticSlider','speedSlider','swathSlider'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{if(!running)draw();}));
+window.addEventListener('resize',draw);draw();
+</script>
+<footer>AURUM SPHERE v7.0 · SIM-05 · Swarm Coverage & Comms · Acoustic range model after WUWNet (2023)</footer>
+</body></html>
